@@ -1,6 +1,6 @@
 # SRMC-POS Backend API
 
-A simple Express-based API for the SRMC-POS system.
+A simple Express-based API for the SRMC-POS system with JWT Authentication.
 
 ## Setup
 
@@ -9,7 +9,8 @@ A simple Express-based API for the SRMC-POS system.
    pnpm install
    ```
 
-2. Standard environment variables are in `.env`.
+2. Configuration:
+   The server uses a `.env` file for configuration. A default `JWT_SECRET` is used if not provided.
 
 ## Development
 
@@ -18,24 +19,27 @@ Run the server in development mode (with hot-reloading):
 pnpm run dev
 ```
 
-## Production
-
-Build and start the server:
-```bash
-pnpm run build
-pnpm start
-```
-
 ## API Endpoints
 
+### Authentication
+- `POST /api/auth/register`: Register a new user.
+  - Body: `{ username, password }`
+- `POST /api/auth/login`: Log in and receive a JWT.
+  - Body: `{ username, password }`
+  - Response: `{ token }`
+
 ### Products
-- `GET /api/products`: List all products.
-- `POST /api/products`: Create a new product.
-- `PATCH /api/products/:id`: Update product details.
-- `DELETE /api/products/:id`: Remove a product.
+- `GET /api/products`: List all products (Public).
+- `POST /api/products`: Create a new product (**Requires Auth**).
+- `PATCH /api/products/:id`: Update product details (**Requires Auth**).
+- `DELETE /api/products/:id`: Remove a product (**Requires Auth**).
 
 ### Orders
-- `POST /api/orders`: Process a sale and reduce stock.
+- `POST /api/orders`: Process a sale and reduce stock (**Requires Auth**).
+
+## Usage with Auth
+For protected endpoints, include the JWT in the `Authorization` header:
+`Authorization: Bearer <your_token>`
 
 ## Data Models
 
@@ -61,4 +65,3 @@ pnpm start
   total: number;
 }
 ```
-# srmc-pos-st-backend

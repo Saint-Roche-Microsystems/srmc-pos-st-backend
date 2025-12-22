@@ -1,25 +1,21 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { Product, User, products, users, updateProducts } from './db';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_fallback_secret_key_123';
 
 app.use(cors());
 app.use(express.json());
 
-// --- Data Models ---
-
-interface Product {
-    id: string;
-    name: string;
-    price: number;
-    stock: number;
-    image?: string;
-}
+// --- Data Models (Local Interfaces) ---
 
 interface OrderItem {
     productId: string;
@@ -32,28 +28,75 @@ interface Order {
     total: number;
 }
 
-// --- In-Memory Storage ---
+// --- Middleware ---
 
-let products: Product[] = [
-    { id: '1', name: 'Premium Coffee', price: 4.50, stock: 50, image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop' },
-    { id: '2', name: 'Avocado Toast', price: 12.00, stock: 20, image: 'https://www.allrecipes.com/thmb/8NccFzsaq0_OZPDKmf7Yee-aG78=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/AvocadoToastwithEggFranceC4x3-bb87e3bbf1944657b7db35f1383fabdb.jpg' },
-    { id: '3', name: 'Green Smoothie', price: 7.50, stock: 30, image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHqWWge9x5HL-88Ax3mJ1IhgN3meBvNIOh4Q&s' },
-    { id: '4', name: 'Blueberry Muffin', price: 3.75, stock: 15, image: 'https://static01.nyt.com/images/2023/04/27/dining/03COOKING-JORDANMARSHMUFFIN2/03COOKING-JORDANMARSHMUFFIN2-threeByTwoMediumAt2X-v2.jpg' },
-    { id: '5', name: 'Croissant', price: 3.25, stock: 25, image: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Croissant-Petr_Kratochvil.jpg' },
-    { id: '6', name: 'Artisan Sourdough', price: 8.00, stock: 10, image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE9r-lTbqJKsW1nwiQTdVftDfHtIbyqbzyPQ&s' },
-];
+const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Access denied, token missing' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid token' });
+        (req as any).user = user;
+        next();
+    });
+};
 
 // --- Endpoints ---
 
+// 0. Auth Module
+
+// POST /auth/register - Register a new user
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    if (users.find(u => u.username === username)) {
+        return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newUser: User = {
+        id: uuidv4(),
+        username,
+        passwordHash
+    };
+
+    users.push(newUser);
+    res.status(201).json({ message: 'User registered successfully', userId: newUser.id });
+});
+
+// POST /auth/login - Log in and get a JWT
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const { username, password } = req.body;
+
+    const user = users.find(u => u.username === username);
+    if (!user) {
+        return res.status(400).json({ error: 'Invalid username or password' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) {
+        return res.status(400).json({ error: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+});
+
 // 1. Products Module
 
-// GET /products - Retrieves the complete list of products
+// GET /products - Retrieves the complete list of products (Public)
 app.get('/api/products', (req: Request, res: Response) => {
     res.json(products);
 });
 
-// POST /products - Creates a new product
-app.post('/api/products', (req: Request, res: Response) => {
+// POST /products - Creates a new product (Protected)
+app.post('/api/products', authenticateToken, (req: Request, res: Response) => {
     const { name, price, stock, image } = req.body;
 
     if (!name || price === undefined || stock === undefined) {
@@ -72,21 +115,22 @@ app.post('/api/products', (req: Request, res: Response) => {
     res.status(201).json(newProduct);
 });
 
-// DELETE /products/:id - Permanently removes a product
-app.delete('/api/products/:id', (req: Request, res: Response) => {
+// DELETE /products/:id - Permanently removes a product (Protected)
+app.delete('/api/products/:id', authenticateToken, (req: Request, res: Response) => {
     const { id } = req.params;
     const initialLength = products.length;
-    products = products.filter(p => p.id !== id);
 
-    if (products.length === initialLength) {
+    const index = products.findIndex(p => p.id === id);
+    if (index === -1) {
         return res.status(404).json({ error: 'Product not found' });
     }
 
+    products.splice(index, 1);
     res.status(204).send();
 });
 
-// PATCH /products/:id - Update product details
-app.patch('/api/products/:id', (req: Request, res: Response) => {
+// PATCH /products/:id - Update product details (Protected)
+app.patch('/api/products/:id', authenticateToken, (req: Request, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -99,7 +143,6 @@ app.patch('/api/products/:id', (req: Request, res: Response) => {
     const updatedProduct = {
         ...products[productIndex],
         ...updates,
-        // Ensure id is not changed
         id: products[productIndex].id
     };
 
@@ -109,15 +152,14 @@ app.patch('/api/products/:id', (req: Request, res: Response) => {
 
 // 2. Sales / Order Module
 
-// POST /orders - Processes a sale
-app.post('/api/orders', (req: Request, res: Response) => {
+// POST /orders - Processes a sale (Protected)
+app.post('/api/orders', authenticateToken, (req: Request, res: Response) => {
     const { orderItems, total }: Order = req.body;
 
     if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
         return res.status(400).json({ error: 'Order items are required' });
     }
 
-    // Check stock and reduce it
     const productsToUpdate = [];
 
     for (const item of orderItems) {
@@ -134,7 +176,6 @@ app.post('/api/orders', (req: Request, res: Response) => {
         productsToUpdate.push({ product, quantity: item.quantity });
     }
 
-    // Commit stock reduction
     productsToUpdate.forEach(({ product, quantity }) => {
         product.stock -= quantity;
     });
