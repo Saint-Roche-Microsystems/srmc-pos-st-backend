@@ -1,0 +1,17 @@
+# Dependencies
+dist
+node_modules
+
+# Environment variables
+.env
+
+# TypeScript
+tsc
+tscconfig.json
+
+# IDE
+.idea
+.vscode
+
+# Other
+.DS_Store
