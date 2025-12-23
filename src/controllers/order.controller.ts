@@ -81,3 +81,17 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error creating order' });
   }
 };
+
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const orders = await Order.find({ userId })
+      .populate('orderItems.productId', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+};
