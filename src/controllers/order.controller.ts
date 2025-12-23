@@ -95,3 +95,29 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error fetching orders' });
   }
 };
+
+export const deleteOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const orderId = req.params.id;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // verifiy that the user owns the order
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({
+        message: 'You do not own this order',
+      });
+    }
+
+    await order.deleteOne();
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting order" });
+  }
+}
