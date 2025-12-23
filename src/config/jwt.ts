@@ -1,0 +1,1 @@
+export const JWT_SECRET = process.env.JWT_SECRET || 'your_fallback_secret_key_123';
