@@ -40,7 +40,10 @@ export const login = async (req: Request, res: Response) => {
       JWT_SECRET
     );
 
-    return res.json({ token });
+    return res.json({ 
+      token,
+      username: user.username,
+     });
   } catch (error) {
     return res.status(500).json({ message: 'Error in login' });
   }
