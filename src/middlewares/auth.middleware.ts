@@ -2,8 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/jwt';
 
+export interface JwtPayload {
+  id: string;
+}
+
 export interface AuthRequest extends Request {
-  user?: any;
+  user?: JwtPayload;
 }
 
 export const authMiddleware = (
@@ -18,7 +22,7 @@ export const authMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     req.user = decoded;
     next();
   } catch (error) {
