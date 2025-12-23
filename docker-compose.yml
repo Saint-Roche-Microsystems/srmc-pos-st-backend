@@ -1,0 +1,14 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo_srmcdb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: srmc_pos
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

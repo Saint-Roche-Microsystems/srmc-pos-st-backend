@@ -1,0 +1,123 @@
+import { Request, Response } from 'express';
+import { Order, Product, User } from '../models/index';
+import { AuthRequest } from '../middlewares/auth.middleware';
+
+const IVA = 0.15;
+
+export const createOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const { orderItems } = req.body;
+
+    const userId = req.user!.id;
+
+    // validate items array
+    if (!orderItems || !Array.isArray(orderItems)) {
+      return res.status(400).json({ message: 'Invalid items' });
+    }
+
+    if(orderItems.length === 0){
+      return res.status(400).json({ message: 'No items provided' });
+    }
+
+    let subtotal = 0;
+
+    // validate quantity and price, check stock
+    for (const item of orderItems) {
+      const { productId, quantity } = item;
+
+      // look for the product
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      if (!quantity) {
+        return res.status(400).json({ message: 'Quantity is required' });
+      }
+
+      if (quantity <= 0) {
+        return res.status(400).json({
+          message: 'Quantity must be positive',
+        });
+      }
+
+      if(!Number.isInteger(quantity)){
+        return res.status(400).json({
+          message: 'Quantity must be an integer',
+        });
+      }
+
+      // Check product and its stock
+      if (product.stock < quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for product ${product.name}`,
+        });
+      }
+
+      // put price in order item
+      item.price = product.price;
+
+      subtotal += quantity * product.price;
+    }
+
+    const total = subtotal + subtotal * IVA;
+
+    // decrement stock
+    for (const item of orderItems) {
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { stock: -item.quantity },
+      });
+    }
+
+    // create order
+    const order = await Order.create({
+      userId,
+      orderItems,
+      total,
+    });
+
+    res.status(201).json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating order' });
+  }
+};
+
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const orders = await Order.find({ userId })
+      .populate('orderItems.productId', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+};
+
+export const deleteOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const orderId = req.params.id;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // verifiy that the user owns the order
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({
+        message: 'You do not own this order',
+      });
+    }
+
+    await order.deleteOne();
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting order" });
+  }
+}
