@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "commit:all": "git add . && git cz"
+    "commit:all": "git add . && git cz",
+    "k6": "k6 run k6/test.js"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +33,7 @@
     "@types/uuid": "^11.0.0",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "k6": "0.0.0"
   }
 }
