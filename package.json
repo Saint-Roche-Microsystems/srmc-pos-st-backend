@@ -16,7 +16,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "npm@10.9.0",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
