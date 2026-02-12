@@ -89,13 +89,11 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # Deploy with docker-compose
+            # Deploy with docker-compose (only update api service, keep mongo data)
             if docker compose version >/dev/null 2>&1; then
-              sudo docker compose down --remove-orphans || true
-              sudo docker compose up -d --build
+              sudo docker compose up -d --build api
             else
-              sudo docker-compose down --remove-orphans || true
-              sudo docker-compose up -d --build
+              sudo docker-compose up -d --build api
             fi
             
             # Setup HTTPS on first deployment or if script changed
