@@ -89,11 +89,22 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # Deploy with docker-compose (only update api service, keep mongo data)
-            if docker compose version >/dev/null 2>&1; then
-              sudo docker compose up -d --build api
+            # Ensure mongo is running (don't rebuild)
+            if docker ps | grep mongo_srmcdb >/dev/null 2>&1; then
+              echo "Mongo container already running"
             else
-              sudo docker-compose up -d --build api
+              if docker compose version >/dev/null 2>&1; then
+                sudo docker compose up -d mongo
+              else
+                sudo docker-compose up -d mongo
+              fi
+            fi
+            
+            # Update only api service without touching mongo
+            if docker compose version >/dev/null 2>&1; then
+              sudo docker compose up -d --no-deps --build api
+            else
+              sudo docker-compose up -d --no-deps --build api
             fi
             
             # Setup HTTPS on first deployment or if script changed
