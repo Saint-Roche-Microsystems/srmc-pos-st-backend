@@ -5,7 +5,7 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev || npm install
+RUN npm ci || npm install
 
 FROM base AS build
 COPY package.json package-lock.json* ./
