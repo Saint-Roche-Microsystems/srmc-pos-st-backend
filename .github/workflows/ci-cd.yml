@@ -89,6 +89,13 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
+            # Stop nginx if running (from previous deployment)
+            sudo systemctl stop nginx 2>/dev/null || true
+            sudo systemctl disable nginx 2>/dev/null || true
+            
+            # Kill any process using ports 80/443
+            sudo lsof -ti:80,443 | xargs -r sudo kill -9 2>/dev/null || true
+            
             # Ensure mongo is running (don't rebuild)
             if docker ps | grep mongo_srmcdb >/dev/null 2>&1; then
               echo "Mongo container already running"
@@ -102,8 +109,9 @@ jobs:
             
             # Force remove old api container
             sudo docker rm -f srmc_pos_api 2>/dev/null || true
+            sudo docker rm -f srmc_pos_caddy 2>/dev/null || true
             
-            # Build and run new api container
+            # Build and run new api and caddy containers
             if docker compose version >/dev/null 2>&1; then
               sudo docker compose up -d --no-deps --build api
               sudo docker compose up -d --no-deps caddy
