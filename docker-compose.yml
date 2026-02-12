@@ -1,4 +1,20 @@
 services:
+  caddy:
+    image: caddy:latest
+    container_name: srmc_pos_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: srmc-pos.vieerr.xyz
+    depends_on:
+      - api
+    restart: unless-stopped
+
   api:
     build: .
     container_name: srmc_pos_api
@@ -22,4 +38,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  caddy_data:
+  caddy_config:
   mongo_data:

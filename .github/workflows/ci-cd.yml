@@ -106,18 +106,10 @@ jobs:
             # Build and run new api container
             if docker compose version >/dev/null 2>&1; then
               sudo docker compose up -d --no-deps --build api
+              sudo docker compose up -d --no-deps caddy
             else
               sudo docker-compose up -d --no-deps --build api
-            fi
-            
-            # Setup HTTPS on first deployment or if script changed
-            if [ ! -f $HOME/.https-configured ] || [ scripts/init-https.sh -nt $HOME/.https-configured ]; then
-              chmod +x scripts/init-https.sh
-              sudo bash scripts/init-https.sh
-              touch $HOME/.https-configured
-            else
-              # Just reload nginx
-              sudo nginx -t && sudo systemctl reload nginx
+              sudo docker-compose up -d --no-deps caddy
             fi
 
       - name: Publish service URL
@@ -125,4 +117,4 @@ jobs:
           echo "## Backend URL" >> $GITHUB_STEP_SUMMARY
           echo "✅ https://srmc-pos.vieerr.xyz" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Status**: Deployed and running with HTTPS" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: Deployed with Caddy reverse proxy and automatic HTTPS" >> $GITHUB_STEP_SUMMARY
