@@ -77,7 +77,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            APP_DIR="/opt/srmc-pos-st-backend"
+            APP_DIR="$HOME/srmc-pos-st-backend"
             REPO_URL="https://github.com/${{ github.repository }}.git"
             
             # Clone/update repo
@@ -91,16 +91,16 @@ jobs:
             
             # Deploy with docker-compose
             if docker compose version >/dev/null 2>&1; then
-              docker compose up -d --build
+              sudo docker compose up -d --build
             else
-              docker-compose up -d --build
+              sudo docker-compose up -d --build
             fi
             
             # Setup HTTPS on first deployment or if script changed
-            if [ ! -f /opt/https-configured ] || [ scripts/init-https.sh -nt /opt/https-configured ]; then
+            if [ ! -f $HOME/.https-configured ] || [ scripts/init-https.sh -nt $HOME/.https-configured ]; then
               chmod +x scripts/init-https.sh
-              bash scripts/init-https.sh
-              touch /opt/https-configured
+              sudo bash scripts/init-https.sh
+              touch $HOME/.https-configured
             else
               # Just reload nginx
               sudo nginx -t && sudo systemctl reload nginx
