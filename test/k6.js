@@ -18,7 +18,7 @@ export const options = {
 };
 
 // URL base del backend
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'https://srmc-pos.vieerr.xyz';
 
 // ==============================
 // SETUP: AUTENTICACIÓN UNA SOLA VEZ
@@ -119,9 +119,4 @@ export default function (data) {
     'order status is 200 or 201': (r) =>
       r.status === 200 || r.status === 201,
   });
-
-  // ==============================
-  // PAUSA REALISTA
-  // ==============================
-  sleep(1);
 }
