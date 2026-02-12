@@ -100,14 +100,13 @@ jobs:
               fi
             fi
             
-            # Remove old api container and build new one
+            # Force remove old api container
+            sudo docker rm -f srmc_pos_api 2>/dev/null || true
+            
+            # Build and run new api container
             if docker compose version >/dev/null 2>&1; then
-              sudo docker compose stop api 2>/dev/null || true
-              sudo docker compose rm -f api 2>/dev/null || true
               sudo docker compose up -d --no-deps --build api
             else
-              sudo docker-compose stop api 2>/dev/null || true
-              sudo docker-compose rm -f api 2>/dev/null || true
               sudo docker-compose up -d --no-deps --build api
             fi
             
